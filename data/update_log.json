@@ -1,1 +1,11 @@
-{"status":"sample","generatedAtUtc":"2026-05-31T01:00:00+00:00"}
+{
+  "generatedAtUtc": "2026-05-31T03:47:00+00:00",
+  "status": "error",
+  "sources": [],
+  "errors": [],
+  "summary": {
+    "US": 0,
+    "JP": 0
+  },
+  "marketSignals": {}
+}
