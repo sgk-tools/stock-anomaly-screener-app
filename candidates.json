@@ -1,0 +1,20 @@
+{
+  "version": "1.3",
+  "status": "error",
+  "message": "ローカル変換に失敗。input_raw に d_us_txt.zip / d_jp_txt.zip があるか確認。",
+  "generatedAtUtc": "2026-05-31T03:47:00+00:00",
+  "sources": [],
+  "errors": [],
+  "summary": {
+    "US": 0,
+    "JP": 0
+  },
+  "marketSignals": {},
+  "rules": {},
+  "candidates": {
+    "US": [],
+    "JP": [],
+    "ETF": [],
+    "ALL": []
+  }
+}
