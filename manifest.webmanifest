@@ -1,9 +1,0 @@
-{
-  "name": "株式アノマリー候補抽出",
-  "short_name": "株式候補",
-  "start_url": "./index.html",
-  "display": "standalone",
-  "background_color": "#0b1020",
-  "theme_color": "#0f172a",
-  "icons": []
-}
