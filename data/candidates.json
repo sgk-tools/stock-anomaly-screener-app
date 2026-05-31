@@ -1,0 +1,39 @@
+{
+  "version": "1.1",
+  "status": "sample",
+  "message": "サンプルデータ。GitHub Actions実行後に実データへ更新される。",
+  "generatedAtUtc": "2026-05-31T01:00:00+00:00",
+  "sources": [],
+  "errors": [],
+  "marketSignals": {
+    "US": {"symbol": "SPY", "score": 50, "label": "中立", "reason": "サンプル"},
+    "JP": {"symbol": "1321", "score": 50, "label": "中立", "reason": "サンプル"}
+  },
+  "rules": {
+    "seasonality": "直近月と同じ月の過去勝率・平均騰落率・中央値",
+    "canslimSimple": "N=52週高値接近、S=出来高倍率、L=モメンタム、M=指数ETFトレンド。C/A/Iは要個別確認。",
+    "etf": "ETFはCAN SLIM銘柄判定ではなく、アノマリー・モメンタム・トレンド・出来高で評価。"
+  },
+  "summary": {"US": 0, "JP": 0},
+  "candidates": {
+    "ALL": [
+      {
+        "market": "US", "symbol": "SAMPLE", "instrument": "stock", "latestDate": "2026-05-29", "close": 123.45,
+        "score": 78.2, "judgement": "買い候補", "reason": "同月勝率70%・平均4.2% / 50日線・200日線の上 / 簡易CAN SLIM強め",
+        "scores": {"anomaly": 72.0, "trend": 87.5, "momentum": 68.0, "high": 85.0, "volume": 75.0, "canslimSimple": 73.4, "market": 50.0, "overall": 78.2},
+        "canslim": {"simpleScore": 73.4, "C": "要確認: 四半期EPS成長", "A": "要確認: 年間EPS成長", "N": "52週高値接近", "S": "出来高増", "L": "強い", "I": "要確認: 機関投資家保有", "M": "中立"},
+        "metrics": {"ret1mPct": 8.1, "ret3mPct": 19.2, "ret6mPct": 33.4, "ret12mPct": 52.3, "sameMonthWinRatePct": 70.0, "sameMonthAvgReturnPct": 4.2, "sameMonthMedianReturnPct": 3.1, "sameMonthSamples": 10, "dist52HighPct": -3.0, "volumeRatio": 1.62, "ma50": 115.2, "ma200": 101.7}
+      },
+      {
+        "market": "JP", "symbol": "1306", "instrument": "ETF", "latestDate": "2026-05-29", "close": 3210,
+        "score": 66.8, "judgement": "注目ETF", "reason": "同月勝率67%・平均2.1% / ETFトレンド良好",
+        "scores": {"anomaly": 60.0, "trend": 75.0, "momentum": 55.0, "high": 65.0, "volume": 50.0, "canslimSimple": 57.0, "market": 50.0, "overall": 66.8},
+        "canslim": null,
+        "metrics": {"ret1mPct": 3.5, "ret3mPct": 7.2, "ret6mPct": 12.8, "ret12mPct": 18.5, "sameMonthWinRatePct": 67.0, "sameMonthAvgReturnPct": 2.1, "sameMonthMedianReturnPct": 1.8, "sameMonthSamples": 9, "dist52HighPct": -7.0, "volumeRatio": 1.08, "ma50": 3050, "ma200": 2900}
+      }
+    ],
+    "US": [],
+    "JP": [],
+    "ETF": []
+  }
+}
