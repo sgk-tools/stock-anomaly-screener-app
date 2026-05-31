@@ -49,7 +49,7 @@ LOCAL_ZIPS = {
 MAX_PER_BUCKET = int(os.getenv("MAX_PER_BUCKET", "80"))
 LOOKBACK_DAYS = int(os.getenv("LOOKBACK_DAYS", "2600"))  # about 10 trading years
 HTTP_TIMEOUT = int(os.getenv("HTTP_TIMEOUT", "60"))
-USER_AGENT = "Mozilla/5.0 stock-anomaly-canslim-etf-screener/1.1"
+USER_AGENT = "Mozilla/5.0 stock-anomaly-canslim-etf-screener/1.2"
 
 MIN_DAYS = 260
 MIN_AVG_VOL = {"US": 100_000, "JP": 50_000}
@@ -546,7 +546,7 @@ def load_existing_or_empty(errors: list[str]) -> dict:
         except Exception:
             pass
     return {
-        "version": "1.1",
+        "version": "1.2",
         "status": "error",
         "message": "データ取得に失敗。Stooq一括ダウンロードが認証で拒否された可能性がある。",
         "generatedAtUtc": utc_now_iso(),
@@ -584,7 +584,10 @@ def main() -> int:
     if not raw_series:
         payload = load_existing_or_empty(errors)
         write_json(payload)
-        return 1
+        print("No valid Stooq bulk data was processed.", flush=True)
+        print("Errors:", errors, flush=True)
+        # Do not fail the GitHub Actions job. The app should display the error/stale data instead.
+        return 0
 
     series_map = {(s.market, s.symbol): s for s in raw_series}
     market_signals = calc_market_signal(series_map)
@@ -607,9 +610,9 @@ def main() -> int:
         payload = load_existing_or_empty(errors or ["no-candidates-after-screening"])
     else:
         payload = {
-            "version": "1.1",
+            "version": "1.2",
             "status": "ok" if not errors else "partial",
-            "message": "自動スクリーニング完了。CAN SLIM簡易フィルターとETF表示を追加。これは売買推奨ではなく候補抽出。",
+            "message": "自動スクリーニング完了。CAN SLIM簡易フィルターとETF表示を追加。データ取得失敗時はアプリに状態を表示。これは売買推奨ではなく候補抽出。",
             "generatedAtUtc": utc_now_iso(),
             "sources": sources,
             "errors": errors,
@@ -627,7 +630,8 @@ def main() -> int:
     print(f"Wrote {OUT_FILE}", flush=True)
     if errors:
         print("Errors:", errors, flush=True)
-    return 0 if status != "error" else 1
+    # Do not fail GitHub Actions on data-source errors; write an error payload for the app instead.
+    return 0
 
 
 if __name__ == "__main__":
