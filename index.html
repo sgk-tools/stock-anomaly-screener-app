@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
   <link rel="manifest" href="manifest.webmanifest">
-  <title>株式アノマリー候補抽出</title>
+  <title>株式アノマリー候補抽出 v1.9</title>
   <style>
     :root {
       --bg: #0b1020;
@@ -48,6 +48,8 @@
     .item { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px; box-shadow: 0 8px 18px var(--shadow); }
     .row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
     .symbol { font-size: 19px; font-weight: 900; letter-spacing: .03em; }
+    .company-name { margin-top: 3px; color: #dbeafe; font-size: 13px; font-weight: 800; line-height: 1.35; overflow-wrap: anywhere; }
+    .company-name.missing { color: var(--muted); font-weight: 600; }
     .market { color: var(--muted); font-size: 12px; margin-left: 6px; font-weight: 700; }
     .tag { display:inline-flex; margin-left: 6px; border-radius: 999px; padding: 2px 7px; font-size: 11px; font-weight: 900; border: 1px solid rgba(148,163,184,.25); color:#cbd5e1; background:#0f172a; vertical-align: 2px; }
     .tag.etf { color:#bfdbfe; border-color:rgba(59,130,246,.45); background:rgba(59,130,246,.12); }
@@ -115,7 +117,7 @@
     </div>
 
     <div class="tools" id="listTools">
-      <input id="searchBox" placeholder="銘柄コードで検索 例：AAPL / 7203 / 1306">
+      <input id="searchBox" placeholder="銘柄コード・銘柄名で検索 例：AAPL / 7203 / トヨタ">
       <select id="judgeFilter">
         <option value="">全判定</option>
         <option value="買い候補">買い候補</option>
@@ -137,8 +139,10 @@
     'use strict';
 
     const DATA_URL = './data/candidates.json?ts=';
+    const NAMES_URL = './data/symbol_names.json?ts=';
     const STORE_KEY = 'stock_anomaly_screener_v1_1_data';
     let appData = null;
+    let symbolNames = {};
     let activeTab = 'ALL';
 
     const els = {
@@ -184,6 +188,29 @@
       return String(s ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
     }
 
+    function nameKeys(item) {
+      const market = String(item.market || '').toUpperCase();
+      const symbol = String(item.symbol || '').toUpperCase();
+      return [market + ':' + symbol, symbol + '.' + market, symbol];
+    }
+
+    function enrichNames(data, names) {
+      if (!data || !data.candidates) return data;
+      const dict = Object.assign({}, names || {}, data.symbolNames || {});
+      for (const bucket of Object.values(data.candidates)) {
+        if (!Array.isArray(bucket)) continue;
+        bucket.forEach(item => {
+          if (!item.name) {
+            for (const k of nameKeys(item)) {
+              if (dict[k]) { item.name = dict[k]; break; }
+            }
+          }
+          item.displayName = item.name ? `${item.symbol} ${item.name}` : item.symbol;
+        });
+      }
+      return data;
+    }
+
     function statusClass(status) {
       if (status === 'ok') return 'status-ok';
       if (status === 'sample' || status === 'partial' || status === 'stale') return 'status-sample';
@@ -216,8 +243,12 @@
         const res = await fetch(DATA_URL + Date.now(), { cache: 'no-store' });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
-        appData = data;
-        localStorage.setItem(STORE_KEY, JSON.stringify(data));
+        try {
+          const nameRes = await fetch(NAMES_URL + Date.now(), { cache: 'no-store' });
+          if (nameRes.ok) symbolNames = await nameRes.json();
+        } catch (_) {}
+        appData = enrichNames(data, symbolNames);
+        localStorage.setItem(STORE_KEY, JSON.stringify(appData));
         render();
       } catch (e) {
         els.statusMessage.textContent = '最新データ取得失敗。保存データを確認する。';
@@ -231,7 +262,7 @@
         appData = { status: 'none', message: '保存データなし。ローカル変換後の data/candidates.json をアップロードして再取得。', generatedAtUtc: null, candidates: { ALL: [], JP: [], US: [], ETF: [] }, errors: [] };
       } else {
         try {
-          appData = JSON.parse(raw);
+          appData = enrichNames(JSON.parse(raw), symbolNames);
           if (!appData.candidates.ETF) appData.candidates.ETF = [];
         } catch (e) {
           appData = { status: 'error', message: '保存データの読み込みに失敗。', generatedAtUtc: null, candidates: { ALL: [], JP: [], US: [], ETF: [] }, errors: [String(e)] };
@@ -246,7 +277,8 @@
       const q = els.searchBox.value.trim().toUpperCase();
       const j = els.judgeFilter.value;
       return base.filter(item => {
-        const symbolOk = !q || String(item.symbol || '').toUpperCase().includes(q);
+        const text = [item.symbol, item.name, item.displayName, item.market].join(' ').toUpperCase();
+        const symbolOk = !q || text.includes(q);
         const judgeOk = !j || item.judgement === j;
         return symbolOk && judgeOk;
       });
@@ -275,10 +307,12 @@
         const isEtf = item.instrument === 'ETF';
         const digits = item.market === 'JP' ? 0 : 2;
         const canslimText = isEtf ? 'ETFは対象外' : fmtNum(s.canslimSimple, 1);
+        const nameHtml = item.name ? `<div class="company-name">${esc(item.name)}</div>` : `<div class="company-name missing">銘柄名未登録</div>`;
         return `<article class="item">
           <div class="row">
             <div>
               <div><span class="symbol">${esc(item.symbol)}</span><span class="market">${esc(item.market)}</span><span class="tag ${isEtf ? 'etf' : ''}">${isEtf ? 'ETF' : '株式'}</span></div>
+              ${nameHtml}
               <span class="judge ${judgeClass(item.judgement)}">${esc(item.judgement)}</span>
             </div>
             <div class="score">${fmtNum(item.score, 1)}</div>
@@ -286,6 +320,7 @@
           <div class="reason">${idx + 1}. ${esc(item.reason || '')}</div>
           <div class="metrics">
             ${metric('現在値', fmtNum(item.close, digits))}
+            ${metric('銘柄名', item.name || '未登録')}
             ${metric('簡易CAN SLIM', canslimText)}
             ${scoreMetric('アノマリー', s.anomaly)}
             ${scoreMetric('トレンド', s.trend)}
@@ -313,6 +348,8 @@
         <ul>
           <li>まず「最新データ取得」を押す。</li>
           <li>「総合」で上位候補を見る。</li>
+          <li>銘柄名が表示されるものは、コードと名前で検索できる。</li>
+          <li>銘柄名未登録のものは、コードで証券アプリやTradingView等を確認する。</li>
           <li>個別株は「簡易CAN SLIM」が高い銘柄を優先確認する。</li>
           <li>ETFは「ETF」タブで個別株と分けて見る。</li>
         </ul>
